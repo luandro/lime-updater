@@ -28,10 +28,11 @@ To set a different password for each node, or to run without `authorized_keys`:
 
 - **--nodes** limits the upgrade to only the listed ones separated by `,` wihout spaces; ex.: `lime-updater --firmware=/home/user/firmware --nodes=san,nico,marcos`
 
+- **--post_install** only run post install, copying files and setting configs to the nodes
 
 ## After upgrade
 
-If you have acess points which aren't running LibreMesh, and just connect to a node thru ethernet, you'll have to reboot them manually. In case sending the backups back to the nodes fail, you can use `--set_backup` to only run the post-upgrade part.
+If you have acess points which aren't running LibreMesh, and just connect to a node thru ethernet, you'll have to reboot them manually. In case sending the backups back to the nodes fail, you can use `--post_install` to only run the post-upgrade part.
 
 ## How it works?
 

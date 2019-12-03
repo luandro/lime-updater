@@ -1,19 +1,58 @@
 {
   "name": "lime-updater",
+  "description": "A command-line tool for updating LibreMesh on all nodes in a mesh network",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "node .",
-    "dev": "nodemon .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "author": "Luandro <luandro@gmail.com>",
+  "bin": {
+    "lime-updater": "./bin/run"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "bugs": "https://github.com/luandro/lime-updater/issues",
   "dependencies": {
+    "@oclif/command": "^1.5.19",
+    "@oclif/config": "^1.13.3",
+    "@oclif/plugin-help": "^2.2.1",
+    "@oclif/plugin-warn-if-update-available": "^1.7.0",
+    "cli-progress": "^3.4.0",
+    "cli-table3": "^0.5.1",
+    "cli-ux": "^5.3.3",
+    "listr": "^0.14.3",
     "mkdirp": "^0.5.1",
+    "node-emoji": "^1.10.0",
     "node-fetch": "^2.6.0",
-    "node-ssh": "^6.0.0"
+    "node-ssh": "^6.0.0",
+    "scp": "0.0.3"
+  },
+  "devDependencies": {
+    "@oclif/test": "^1.2.5",
+    "chai": "^4.2.0",
+    "eslint": "^5.16.0",
+    "eslint-config-oclif": "^3.1.0",
+    "mocha": "^5.2.0",
+    "nyc": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "/bin",
+    "/src"
+  ],
+  "homepage": "https://github.com/luandro/lime-updater",
+  "keywords": [],
+  "license": "ISC",
+  "main": "index.js",
+  "oclif": {
+    "bin": "lime-updater",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-warn-if-update-available"
+    ]
+  },
+  "repository": "luandro/lime-updater",
+  "scripts": {
+    "dev": "nodemon .",
+    "posttest": "eslint .",
+    "start": "node .",
+    "test": "nyc mocha --forbid-only \"test/**/*.test.js\""
   }
 }
