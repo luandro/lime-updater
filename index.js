@@ -75,6 +75,15 @@ async function backupFile (ssh, remoteFile, locaFile) {
   await fs.writeFileSync(locaFile, getFile)
 }
 
+async function putFile (ssh, locaFile, remoteFile) {
+  ssh.putFile(localFile, remoteFile).then(()  => {
+    console.log("The File thing is done")
+  }, (error) => {
+    console.log("Something's wrong")
+    console.log(error)
+  })
+}
+
 async function run () {
   console.log('Hello, lets start by getting some information about the nodes in the mesh')
   try {
@@ -107,6 +116,7 @@ async function run () {
         privateKey: '/home/luandro/.ssh/id_rsa'
       })
       console.log('Connected to', node)
+      // get ipv6
       // get model
       const getBoardInfo = await ssh.execCommand('ubus call system board')
       if (getBoardInfo.stderr) {
@@ -134,7 +144,19 @@ async function run () {
     console.log('Lets start updating from the most distant nodes')
     await sortedRoutes.forEach(async (nodeInfo) => {
       console.log("START BY NODE", nodeInfo.node, nodeInfo.distance)
+      // copy firmware according to model
+      putFile()
+      // sysupgrade -n
+      // wait 
     })
+    // put lime config
+    // put pirania config
+    // put dropbear config
+    // lime-config && lime-apply
+    // put pirania db.csv
+    // put authorized_keys
+    // remove first_run
+    // set password
   } catch (err) {
     console.log('Error ------>', err)
   }
