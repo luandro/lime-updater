@@ -11,7 +11,9 @@ module.exports = async (host, username) => {
     })
     return ssh
   } catch (error) {
-    console.log(error)
-    return false
+    console.log('Error on connect-to-node', host, error)
+    return {
+      error,
+    }
   }
 }

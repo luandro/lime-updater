@@ -1,4 +1,4 @@
-module.exports = async (node, ssh) => {
+module.exports = async (ssh, node) => {
   let route = {
     node,
     distance: -1,
@@ -12,7 +12,8 @@ module.exports = async (node, ssh) => {
             await data.split('\n').forEach(async output => {
               if (output.length > 1) {
                 const info = await output.split(' ')
-                const distance = await parseInt(info[1].split(':')[0], 2)
+                // console.log("TCL: onStdout -> info", info)
+                const distance = await parseInt(info[1].split(':')[0], 10)
                 if (!route.distance || distance > route.distance) {
                   route.distance = distance
                 }
@@ -24,12 +25,12 @@ module.exports = async (node, ssh) => {
         }
       },
       onStderr(chunk) {
-        console.log('stderrChunk ================> ', chunk.toString('utf8'))
+        // console.log('stderrChunk ================> ', chunk.toString('utf8'))
       },
     })
     return route
   } catch (error) {
-    console.log("TCL: err", error)
+    route.error = error
     return route
   }
 }

@@ -6,6 +6,8 @@ module.exports = async ssh => {
     const boardInfo = await JSON.parse(getBoardInfo)
     return boardInfo
   } catch (error) {
-    return null
+    return {
+      error,
+    }
   }
 }

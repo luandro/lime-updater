@@ -6,6 +6,8 @@ module.exports = async ssh => {
     const info = await JSON.parse(getNodeInfo)
     return info.ips
   } catch (error) {
-    return null
+    return {
+      error,
+    }
   }
 }

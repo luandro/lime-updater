@@ -4,6 +4,8 @@ const mkdirp = require('mkdirp')
 
 module.exports = async node => {
   try {
+    // const interface = ubus call lime-openairview get_interfaces -> [0].name
+    // const mac = ubus call network.device status "{ 'name':'wlan0-mesh'}" -> macaddr
     const nodeDir = `${appDir}/${node}`
     await mkdirp.sync(nodeDir)
     return nodeDir

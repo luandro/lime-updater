@@ -1,5 +1,6 @@
 const {Command, flags} = require('@oclif/command')
 const {cli} = require('cli-ux')
+const chalk = require('chalk')
 
 const waitFor = require('./wait-for')
 const getMeshNodes = require('./get-mesh-nodes')
@@ -17,17 +18,38 @@ class LimeUpdaterCommand extends Command {
   async run() {
     const {flags} = this.parse(LimeUpdaterCommand)
     const postInstall = flags.post_install
+    const initialNode = flags.initial_node
+
     clear()
-    log('Welcome, lets start by getting your mesh information')
+    /* Get revison */
+    chalk.blue(log('Welcome, lets start by getting the latest LibreMesh revision'))
+    cli.action.start('Getting revision')
     const latestRevision = await getlatestRevision()
-    if (latestRevision) log('Latest LibreMesh revision:', latestRevision)
-    const thisNodeSsh = await connectToNode('thisnode.info')
+    cli.action.stop('Got Revision')
+    if (latestRevision) chalk.cyan(log('Latest LibreMesh revision:', latestRevision))
+    /* Get mesh nodes */
+    cli.action.start('Lets connect to this node')
+    const thisNodeSsh = await connectToNode(initialNode || 'thisnode.info')
     const {nodes, hostname} = await getMeshNodes(thisNodeSsh)
-    const sortedNodes = await getRoutes(nodes, hostname)
-    const outOfDateNodes = sortedNodes.filter(i => i.board.release.version !== latestRevision)
-    clear()
+    cli.action.stop('Connected!')
+    /* Get data from nodes */
+    printNodesTable(nodes, latestRevision)
+    const sortedNodes = await getRoutes(thisNodeSsh, nodes, hostname)
+    const outOfDateNodes = sortedNodes.filter(i => {
+      if (i.board && !i.board.error) {
+        return i.board.release.version !== latestRevision
+      }
+      return null
+    })
+    const hasError = sortedNodes.filter(i => {
+      if (i && i.error) {
+        return i
+      }
+      if (i.board.error || i.ip.error) return i
+    })
     printNodesTable(sortedNodes, latestRevision)
-    if (!postInstall && outOfDateNodes.length === 0) {
+    /* Prompts */
+    if (!postInstall && outOfDateNodes.length === 0 && hasError.length === 0) {
       log('Great job, everything up to date!')
     } else if (postInstall) {
       const promptContinue = await cli.confirm('Continue post installing nodes? (Y/n)')
@@ -39,6 +61,8 @@ class LimeUpdaterCommand extends Command {
           console.log("TCL: LimeUpdaterCommand -> run -> config", config)
         })
       }
+    } else if (hasError.length > 0) {
+      log(`Had problems connecting to ${hasError.length} nodes in the mesh!`)
     } else {
       const promptContinue = await cli.prompt('Continue upgrading nodes?')
       console.log("TCL: LimeUpdaterCommand -> run -> promptContinue", promptContinue)
@@ -75,6 +99,7 @@ LimeUpdaterCommand.flags = {
   version: flags.version({char: 'v'}),
   // add --help flag to show CLI version
   help: flags.help({char: 'h'}),
+  initial_node: flags.string({char: 'i', description: 'Define the node from which you want to see the mesh perspective'}),
   post_install: flags.boolean({char: 'p', default: false, description: 'only run post install, copying files and setting configs to the nodes'}),
 }
 

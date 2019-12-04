@@ -1,23 +1,35 @@
 const Table = require('cli-table3')
-const emoji = require('node-emoji')
+const chalk = require('chalk')
 
 module.exports = (nodes, latestRevision) => {
-// console.log("TCL: nodes", nodes)
-  // instantiate
   const table = new Table({
-    head: ['Hops', 'Model', 'Hostname', 'Version'],
-    colWidths: [10, 25, 25, 15],
+    head: ['Hops', 'Model', 'Hostname', 'IP', 'Version'],
+    colWidths: [10, 25, 25, 20, 15],
   })
 
   // table is an Array, so you can `push`, `unshift`, `splice` and friends
   nodes.forEach(node => {
-    const isUpToDate = node.board.release.version === latestRevision ? emoji.get('heavy_check_mark') : emoji.get('x')
+    let isUpToDate = null
+    let model = 'loading'
+    let revision = 'loading'
+    let ip = 'loading'
+    if (node.board && !node.board.error && latestRevision) {
+      isUpToDate = node.board.release.version === latestRevision
+      model = node.board.model
+      revision = isUpToDate ? chalk.green(node.board.release.revision) : chalk.red(node.board.release.revision)
+    }
+    if (node.ip && node.ip[0]) {
+      ip = node.ip.filter(i => i.version === '4')[0].address.split('/')[0]
+    }
+
     table.push([
-      node.distance,
-      node.board.model,
+      node.distance === undefined ? 'loading' : node.distance,
+      model,
       node.node,
-      node.board.release.revision + ' ' + isUpToDate,
+      ip,
+      revision,
     ])
   })
+  console.clear()
   console.log(table.toString())
 }
