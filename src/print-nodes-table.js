@@ -2,6 +2,7 @@ const Table = require('cli-table3')
 const chalk = require('chalk')
 
 module.exports = (nodes, latestRevision) => {
+  console.log("TCL: nodes", nodes)
   const table = new Table({
     head: ['Hops', 'Model', 'Hostname', 'IP', 'Version'],
     colWidths: [10, 25, 25, 20, 15],
@@ -30,6 +31,9 @@ module.exports = (nodes, latestRevision) => {
       revision,
     ])
   })
-  console.clear()
+  if (process.env.NODE_ENV !== 'development') {
+    console.clear()
+  }
+  if (latestRevision) chalk.green(console.log('Latest LibreMesh revision:', latestRevision))
   console.log(table.toString())
 }

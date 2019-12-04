@@ -16,7 +16,6 @@
     "cli-progress": "^3.4.0",
     "cli-table3": "^0.5.1",
     "cli-ux": "^5.3.3",
-    "listr": "^0.14.3",
     "mkdirp": "^0.5.1",
     "node-emoji": "^1.10.0",
     "node-fetch": "^2.6.0",
@@ -51,9 +50,9 @@
   },
   "repository": "luandro/lime-updater",
   "scripts": {
-    "dev": "nodemon .",
+    "dev": "NODE_ENV=development nodemon bin/run",
     "posttest": "eslint .",
-    "start": "node .",
+    "start": "node bin/run",
     "test": "nyc mocha --forbid-only \"test/**/*.test.js\""
   }
 }

@@ -5,8 +5,10 @@ module.exports = async ssh => {
     const getNodes = await execute(ssh, 'ubus call lime-utils get_cloud_nodes')
     let {nodes} = await JSON.parse(getNodes)
     const hostname = getHostName
+    const exists = nodes.indexOf(hostname) !== -1
+
     return {
-      nodes: [hostname, ...nodes],
+      nodes: exists ? nodes : [hostname, ...nodes],
       hostname,
     }
   } catch (error) {

@@ -34,58 +34,68 @@ class LimeUpdaterCommand extends Command {
     cli.action.stop('Connected!')
     /* Get data from nodes */
     printNodesTable(nodes, latestRevision)
-    const sortedNodes = await getRoutes(thisNodeSsh, nodes, hostname)
+    const sortedNodes = await getRoutes(thisNodeSsh, nodes, hostname, latestRevision)
     const outOfDateNodes = sortedNodes.filter(i => {
       if (i.board && !i.board.error) {
         return i.board.release.version !== latestRevision
       }
-      return null
     })
     const hasError = sortedNodes.filter(i => {
       if (i && i.error) {
         return i
       }
-      if (i.board.error || i.ip.error) return i
+      if (i.board && i.ip) {
+        if (i.board.error || i.ip.error) return i
+      }
     })
     printNodesTable(sortedNodes, latestRevision)
     /* Prompts */
     if (!postInstall && outOfDateNodes.length === 0 && hasError.length === 0) {
       log('Great job, everything up to date!')
+      this.exit()
     } else if (postInstall) {
-      const promptContinue = await cli.confirm('Continue post installing nodes? (Y/n)')
+      const promptContinue = await cli.confirm('Continue post installing nodes (Y/n)')
       if (promptContinue) {
         clear()
-        await sortedNodes.forEach(async info => {
-          const ssh = await connectToNode(info.node)
-          const config = await nodeConfig(ssh, info)
-          console.log("TCL: LimeUpdaterCommand -> run -> config", config)
-        })
+        chalk.yellow(log('Not available yet'))
+        this.exit()
+        /* Send backup to each node */
+        // await sortedNodes.forEach(async info => {
+        //   const ssh = await connectToNode(info.node)
+        //   const config = await nodeConfig(ssh, info)
+        //   console.log("TCL: LimeUpdaterCommand -> run -> config", config)
+        // })
+      } else {
+        this.exit()
       }
     } else if (hasError.length > 0) {
-      log(`Had problems connecting to ${hasError.length} nodes in the mesh!`)
+      chalk.red(log(`Had problems connecting to ${hasError.length} nodes in the mesh!`))
+      this.exit()
     } else {
-      const promptContinue = await cli.prompt('Continue upgrading nodes?')
-      console.log("TCL: LimeUpdaterCommand -> run -> promptContinue", promptContinue)
+      const promptContinue = await cli.confirm('Continue upgrading nodes (Y/n)')
+      if (promptContinue) {
+        chalk.yellow(log('Not available yet'))
+        this.exit()
       /* Iterating nodes */
-      await sortedNodes.forEach(async info => {
-        console.log("START BY NODE", info.node, info.distance)
-        const ssh = await connectToNode(info.node)
-        console.log('Connected to', info.node)
-        const backup = nodeBackup(ssh, info)
-        console.log("TCL: LimeUpdaterCommand -> run -> backup", backup)
-        const doUpgrade = await upgrade(info.node)
-        // console.log("TCL: LimeUpdaterCommand -> run -> doUpgrade", doUpgrade)
-        // copy firmware according to model
-        // putFile()
-        // sysupgrade -n
-        // wait
-      })
+      //   await sortedNodes.forEach(async info => {
+      //     /* Backup each node */
+      //     console.log("START BY NODE", info.node, info.distance)
+      //     const ssh = await connectToNode(info.node)
+      //     console.log('Connected to', info.node)
+      //     const backup = nodeBackup(ssh, info)
+      //     console.log("TCL: LimeUpdaterCommand -> run -> backup", backup)
+      //     const doUpgrade = await upgrade(info.node)
+      //     // console.log("TCL: LimeUpdaterCommand -> run -> doUpgrade", doUpgrade)
+      //     // copy firmware according to model
+      //     // putFile()
+      //     // sysupgrade -n
+      //     // wait
+      //   })
+      // }
+      } else {
+        this.exit()
+      }
     }
-    /* Example */
-    // this.log(`hello ${name} from ./src/index.js`)
-    // await waitFor(3)
-    // console.clear()
-    // this.log(`hello again ${name} from ./src/index.js`)
   }
 }
 
