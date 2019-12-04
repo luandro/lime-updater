@@ -21,30 +21,35 @@ module.exports = async (thisNodeSsh, nodes, hostname, latestRevision) => {
     }
     for (const node of nodes) {
       let route = {}
-      let ssh
       if (node === hostname) {
-        ssh = thisNodeSsh
         route = {
           node: hostname,
           distance: 0,
         }
       } else {
         route = await traceRouteToNode(thisNodeSsh, node)
-        updateRoute(route, routes)
+      }
+      updateRoute(route, routes)
+    }
+    for (const node of nodes) {
+      let thisRoute = routes.filter(i => i.node === node)[0]
+      let ssh
+      if (node === hostname) {
+        ssh = thisNodeSsh
+      } else {
         ssh = await connectToNode(node)
       }
       if (ssh.error) {
-        route.ip = {error: ssh.error}
-        route.board = {error: ssh.error}
+        thisRoute.ip = {error: ssh.error}
+        thisRoute.board = {error: ssh.error}
       } else {
-        route.ip = await getNodeIps(ssh)
-        updateRoute(route, routes)
-        route.board = await getBoardInfo(ssh)
-        updateRoute(route, routes)
+        thisRoute.ip = await getNodeIps(ssh)
+        updateRoute(thisRoute, routes)
+        thisRoute.board = await getBoardInfo(ssh)
+        updateRoute(thisRoute, routes)
       }
-      updateRoute(route)
+      updateRoute(thisRoute)
     }
-    console.log("TCL: routes", routes)
     return routes
   } catch (error) {
     throw error

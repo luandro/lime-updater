@@ -53,6 +53,7 @@
     "dev": "NODE_ENV=development nodemon bin/run",
     "posttest": "eslint .",
     "start": "node bin/run",
-    "test": "nyc mocha --forbid-only \"test/**/*.test.js\""
+    "test": "nyc mocha --forbid-only \"test/**/*.test.js\"",
+    "pack:all": "oclif-dev pack:macos && oclif-dev pack:deb && oclif-dev pack:mwin && oclif-dev pack"
   }
 }

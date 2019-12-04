@@ -2,7 +2,6 @@ const Table = require('cli-table3')
 const chalk = require('chalk')
 
 module.exports = (nodes, latestRevision) => {
-  console.log("TCL: nodes", nodes)
   const table = new Table({
     head: ['Hops', 'Model', 'Hostname', 'IP', 'Version'],
     colWidths: [10, 25, 25, 20, 15],
