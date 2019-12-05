@@ -2,11 +2,11 @@ const setupDir = require('./setup-dir')
 const backupFile = require('./backup-file')
 const execute = require('./ssh-exec')
 
-module.exports = async (ssh, nodeInfo) => {
+module.exports = async (ssh, nodeInfo, dataDir) => {
   console.log("TCL: nodeInfo", nodeInfo)
   const {node} = nodeInfo
   // save config/lime
-  const nodeDir = setupDir(node)
+  const nodeDir = setupDir(node, dataDir)
   const lime = await backupFile(ssh, '/etc/config/lime', `${nodeDir}/lime`)
   // save config/pirania
   const pirania = await backupFile(ssh, '/etc/config/pirania', `${nodeDir}/pirania`)

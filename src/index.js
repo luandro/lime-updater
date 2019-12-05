@@ -3,10 +3,9 @@ const {cli} = require('cli-ux')
 const chalk = require('chalk')
 
 const waitFor = require('./wait-for')
-const getMeshNodes = require('./get-mesh-nodes')
 const connectToNode = require('./connect-to-node')
-const log = console.log
-const clear = console.clear
+const getMeshNodes = require('./get-mesh-nodes')
+const getHostName = require('./get-hostname')
 const getlatestRevision = require('./get-latest-revision')
 const getRoutes = require('./get-routes')
 const printNodesTable = require('./print-nodes-table')
@@ -14,13 +13,20 @@ const nodeBackup = require('./node-backup')
 const upgrade = require('./upgrade')
 const nodeConfig = require('./node-config')
 
+const log = console.log
+const clear = console.clear
+
 class LimeUpdaterCommand extends Command {
   async run() {
     const {flags} = this.parse(LimeUpdaterCommand)
     const postInstall = flags.post_install
     const initialNode = flags.initial_node
-
-    clear()
+    const dataDir = flags.data_dir
+    const nodesFlag = flags.nodes
+    const customNodes = nodesFlag ? nodesFlag.split(',') : null
+    if (process.env.NODE_ENV !== 'development') {
+      clear()
+    }
     /* Get revison */
     chalk.blue(log('Welcome, lets start by getting the latest LibreMesh revision'))
     cli.action.start('Getting revision')
@@ -30,7 +36,17 @@ class LimeUpdaterCommand extends Command {
     /* Get mesh nodes */
     cli.action.start('Lets connect to this node')
     const thisNodeSsh = await connectToNode(initialNode || 'thisnode.info')
-    const {nodes, hostname} = await getMeshNodes(thisNodeSsh)
+    let nodes
+    let hostname
+    if (customNodes) {
+      chalk.yellow(log('Running for nodes:', nodesFlag))
+      hostname = await getHostName(thisNodeSsh)
+      nodes = customNodes
+    } else {
+      const res = await getMeshNodes(thisNodeSsh)
+      nodes = res.nodes
+      hostname = res.hostname
+    }
     cli.action.stop('Connected!')
     /* Get data from nodes */
     printNodesTable(nodes, latestRevision)
@@ -54,11 +70,10 @@ class LimeUpdaterCommand extends Command {
       log('Great job, everything up to date!')
       this.exit()
     } else if (postInstall) {
-      const promptContinue = await cli.confirm('Continue post installing nodes (Y/n)')
+      const promptContinue = await cli.confirm('Continue upgrading nodes (Y/n)')
       if (promptContinue) {
+        log(`Let's backup the configs and logs from the nodes into ${dataDir}`)
         clear()
-        chalk.yellow(log('Not available yet'))
-        this.exit()
         /* Send backup to each node */
         // await sortedNodes.forEach(async info => {
         //   const ssh = await connectToNode(info.node)
@@ -72,9 +87,9 @@ class LimeUpdaterCommand extends Command {
       chalk.red(log(`Had problems connecting to ${hasError.length} nodes in the mesh!`))
       this.exit()
     } else {
-      const promptContinue = await cli.confirm('Continue upgrading nodes (Y/n)')
+      const nodesMsg = outOfDateNodes.length < sortedNodes.length ? outOfDateNodes.map(i => i.node).join(', ') : 'all nodes'
+      const promptContinue = await cli.confirm(`Continue post installing for ${nodesMsg} (Y/n)`)
       if (promptContinue) {
-        chalk.yellow(log('Not available yet'))
         this.exit()
       /* Iterating nodes */
       //   await sortedNodes.forEach(async info => {
@@ -82,7 +97,7 @@ class LimeUpdaterCommand extends Command {
       //     console.log("START BY NODE", info.node, info.distance)
       //     const ssh = await connectToNode(info.node)
       //     console.log('Connected to', info.node)
-      //     const backup = nodeBackup(ssh, info)
+      //     const backup = nodeBackup(ssh, info, dataDir)
       //     console.log("TCL: LimeUpdaterCommand -> run -> backup", backup)
       //     const doUpgrade = await upgrade(info.node)
       //     // console.log("TCL: LimeUpdaterCommand -> run -> doUpgrade", doUpgrade)
@@ -111,6 +126,8 @@ LimeUpdaterCommand.flags = {
   help: flags.help({char: 'h'}),
   initial_node: flags.string({char: 'i', description: 'Define the node from which you want to see the mesh perspective'}),
   post_install: flags.boolean({char: 'p', default: false, description: 'only run post install, copying files and setting configs to the nodes'}),
+  data_dir: flags.string({char: 'd', description: 'Folder where to store backup data for the nodes.'}),
+  nodes: flags.string({char: 'n', description: 'limits the upgrade to only the listed ones separated by `,` wihout spaces'}),
 }
 
 module.exports = LimeUpdaterCommand
