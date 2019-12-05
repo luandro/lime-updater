@@ -41,6 +41,9 @@
   "keywords": [],
   "license": "ISC",
   "main": "index.js",
+  "pkg": {
+    "scripts": "./lib/**/*.js"
+  },
   "oclif": {
     "bin": "lime-updater",
     "plugins": [
@@ -54,6 +57,7 @@
     "posttest": "eslint .",
     "start": "node bin/run",
     "test": "nyc mocha --forbid-only \"test/**/*.test.js\"",
-    "pack:all": "oclif-dev pack:macos && oclif-dev pack:deb && oclif-dev pack:mwin && oclif-dev pack"
+    "pack:all": "pkg bin/run --out-path dist",
+    "pack:linux": "pkg -t node10-linux-x64 bin/run --out-path dist"
   }
 }
