@@ -1,7 +1,6 @@
 const scp = require('scp')
 
-module.exports = async (host, localFile, remoteFile) => new Promise((resolve, reject) => {
-  console.log("TCL: host", host)
+module.exports = async (host, localFile, remoteFile) => new Promise(resolve => {
   const options = {
     file: localFile,
     user: 'root',
@@ -9,8 +8,10 @@ module.exports = async (host, localFile, remoteFile) => new Promise((resolve, re
     port: '22',
     path: remoteFile,
   }
-  scp.send(options, function (err) {
-    if (err) reject(err)
+  scp.send(options, error => {
+    if (error) resolve({
+      error: JSON.parse(JSON.stringify(error)).cmd,
+    })
     else resolve(true)
   })
 })

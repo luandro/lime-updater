@@ -1,7 +1,6 @@
 const traceRouteToNode = require('./trace-route-to-node')
 const connectToNode = require('./connect-to-node')
-const getNodeIps = require('./get-node-ips')
-const getBoardInfo = require('./get-board-info')
+const getNodeInfo = require('./get-node-info')
 const printNodesTable = require('./print-nodes-table')
 
 module.exports = async (thisNodeSsh, nodes, hostname, latestRevision) => {
@@ -19,7 +18,7 @@ module.exports = async (thisNodeSsh, nodes, hostname, latestRevision) => {
       printNodesTable(newList, latestRevision)
       routes = newList
     }
-    for (const node of nodes) {
+    const traceNode = async node => {
       let route = {}
       if (node === hostname) {
         route = {
@@ -31,7 +30,7 @@ module.exports = async (thisNodeSsh, nodes, hostname, latestRevision) => {
       }
       updateRoute(route, routes)
     }
-    for (const node of nodes) {
+    const getInfo = async node => {
       let thisRoute = routes.filter(i => i.node === node)[0]
       let ssh
       if (node === hostname) {
@@ -43,13 +42,24 @@ module.exports = async (thisNodeSsh, nodes, hostname, latestRevision) => {
         thisRoute.ip = {error: ssh.error}
         thisRoute.board = {error: ssh.error}
       } else {
-        thisRoute.ip = await getNodeIps(ssh)
-        updateRoute(thisRoute, routes)
-        thisRoute.board = await getBoardInfo(ssh)
+        const routeInfo = await getNodeInfo(ssh)
+        thisRoute = Object.assign(thisRoute, routeInfo, {})
         updateRoute(thisRoute, routes)
       }
       updateRoute(thisRoute)
     }
+    if (nodes.length > 1) {
+      for (const node of nodes) {
+        await traceNode(node)
+      }
+      for (const node of nodes) {
+        await getInfo(node)
+      }
+    } else {
+      await traceNode(nodes[0])
+      await getInfo(nodes[0])
+    }
+    printNodesTable(routes, latestRevision)
     return routes
   } catch (error) {
     throw error

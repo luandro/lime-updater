@@ -1,13 +1,17 @@
-const fs = require('fs')
-const execute = require('./ssh-exec')
+const scp = require('scp')
 
-module.exports = async (ssh, remoteFile, locaFile) => {
-  try {
-    const getFile = await execute(ssh, `cat ${remoteFile}`)
-    await fs.writeFileSync(locaFile, getFile)
-    return true
-  } catch (error) {
-    // throw error
-    return null
+module.exports = async (host, remoteFile, localFile) => new Promise(resolve => {
+  const options = {
+    file: remoteFile,
+    user: 'root',
+    host: host,
+    port: '22',
+    path: localFile,
   }
-}
+  scp.get(options, error => {
+    if (error) resolve({
+      error: JSON.parse(JSON.stringify(error)).cmd,
+    })
+    else resolve(true)
+  })
+})

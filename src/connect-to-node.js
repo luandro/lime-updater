@@ -13,7 +13,7 @@ module.exports = async (host, username) => {
   } catch (error) {
     console.log('Error on connect-to-node', host, error)
     return {
-      error,
+      error: JSON.parse(JSON.stringify(error))
     }
   }
 }

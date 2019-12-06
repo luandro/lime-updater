@@ -1,27 +1,23 @@
-const setupDir = require('./setup-dir')
 const backupFile = require('./backup-file')
 const execute = require('./ssh-exec')
 
 module.exports = async (ssh, nodeInfo, dataDir) => {
-  console.log("TCL: nodeInfo", nodeInfo)
-  const {node} = nodeInfo
   // save config/lime
-  const nodeDir = setupDir(node, dataDir)
-  const lime = await backupFile(ssh, '/etc/config/lime', `${nodeDir}/lime`)
-  // save config/pirania
-  const pirania = await backupFile(ssh, '/etc/config/pirania', `${nodeDir}/pirania`)
-  // save config/dropbear
-  const dropbear = await backupFile(ssh, '/etc/config/dropbear', `${nodeDir}/dropbear`)
-  // save pirania db.csv
-  const dbPath = await execute(ssh, 'uci get pirania.base_config.db_path')
-  const db = await backupFile(ssh, dbPath, `${nodeDir}/db.csv`)
-  // save know_hosts
-  const keys = await backupFile(ssh, '/etc/dropbear/authorized_keys', `${nodeDir}/authorized_keys`)
+  let report = {
+    error: null,
+  }
+  const generateReport = await execute(ssh, 'lime-report > /tmp/lime.report')
+  if (generateReport.error) {
+    report.error = generateReport.error
+  } else {
+    report = await backupFile(ssh, '/tmp/lime.report', `${dataDir}/lime.report`)
+  }
+  const createBackup = await execute(ssh, 'sysupgrade -b /tmp/backup-${HOSTNAME}-$(date +%F).tar.gz && ls /tmp/backup-*.tar.gz')
+  const backupPath = createBackup.split('\n')[1]
+  const backupName = backupPath.split('/tmp/')[1]
+  const backup = await backupFile(nodeInfo.node, backupPath, `${dataDir}/${backupName}`)
   return {
-    lime,
-    pirania,
-    dropbear,
-    db,
-    keys,
+    report,
+    backup,
   }
 }

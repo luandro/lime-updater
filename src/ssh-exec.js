@@ -1,7 +1,10 @@
-module.exports = async (ssh, command) => {
-  const exec = await ssh.execCommand(command)
+module.exports = async (ssh, command, cwd) => {
+  const exec = await ssh.execCommand(command, {cwd})
   if (exec.stderr) {
-    throw ('STDERR: ' + exec.stderr)
+    // console.log('STDERR: ' + exec.stderr)
+    return {
+      error: exec.stderr,
+    }
   }
   return exec.stdout
 }

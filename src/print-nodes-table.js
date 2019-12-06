@@ -18,10 +18,9 @@ module.exports = (nodes, latestRevision) => {
       model = node.board.model
       revision = isUpToDate ? chalk.green(node.board.release.revision) : chalk.red(node.board.release.revision)
     }
-    if (node.ip && node.ip[0]) {
-      ip = node.ip.filter(i => i.version === '4')[0].address.split('/')[0]
+    if (node.ip) {
+      ip = node.ip
     }
-
     table.push([
       node.distance === undefined ? 'loading' : node.distance,
       model,
