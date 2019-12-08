@@ -36,7 +36,6 @@ async function doUpgrade({dir, nodes, hostname, msg, firmwarePath, latestRevisio
         const promptUpgrade = await cli.confirm(`Are you sure you want to upgrade the firmware for ${msg} (y/n)`)
         if (promptUpgrade) {
           const upgrade = await runUpgrade(firmwareCheckedNodes)
-          console.log("TCL: doUpgrade -> upgrade", upgrade)
           await cli.anykey('Upgrade done. Press any key to proceed with restore')
           return upgrade
         }
@@ -182,8 +181,8 @@ LimeUpdaterCommand.flags = {
   restore: flags.boolean({char: 'r', default: false, description: 'run restoring backup, copying files and setting configs to the nodes'}),
   data_dir: flags.string({char: 'd', description: 'Folder where to store backup data for the nodes.'}),
   nodes: flags.string({char: 'n', description: 'limits the upgrade to only the listed ones separated by `,` wihout spaces'}),
+  firmware: flags.string({char: 'f', description: 'can be an absolute path in your system of a url where the firmware live. The program expects the files to be arranged as they are cooked'}),
   // yes: flags.boolean({char: 'y', default: false, description: 'run without asking for prompts'}),
-  firmware: flags.string({char: 'f', description: 'can be an absolute path in your system of a url where the firmware live. The program expects the files to be arranged as they are cooked'})
 }
 
 module.exports = LimeUpdaterCommand
