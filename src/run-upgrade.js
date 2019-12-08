@@ -1,9 +1,10 @@
+/* eslint-disable no-await-in-loop, no-console */
 const waitFor = require('./wait-for')
 const connectToNode = require('./connect-to-node')
 const runSysupgrade = require('./run-sysupgrade')
 const printUpgradeTable = require('./print-upgrade-table')
 
-module.exports = async (dir, nodes) => {
+module.exports = async nodes => {
   let upgradingNodes = nodes
   const updateNode = newItem => upgradingNodes
   .map(r => {
@@ -19,10 +20,6 @@ module.exports = async (dir, nodes) => {
     const sysupgrade = await runSysupgrade(ssh, node)
     updateNode(sysupgrade)
     printUpgradeTable(upgradingNodes)
-    await waitFor(60, true)
-    const restore = await runRestore(dir, sysupgrade)
-    console.log("TCL: restore", restore)
-    await waitFor(60, true)
   }
   printUpgradeTable(upgradingNodes)
   return upgradingNodes

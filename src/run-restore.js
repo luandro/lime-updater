@@ -1,116 +1,108 @@
-const fs = require('fs')
+/* eslint-disable no-await-in-loop, no-console, guard-for-in */
 const waitFor = require('./wait-for')
-const connect = require('./connect-to-node')
-const printUpgradeTable = require('./print-upgrade-table')
-const getNodeInfo = require('./get-node-info')
-const putFile = require('./put-file')
-const execute = require('./ssh-exec')
 const runSysupgrade = require('./run-sysupgrade')
+const connectAllIps = require('./connect-all-ips')
+const connect = require('./connect-to-node')
+const execute = require('./ssh-exec')
+const printRestoreTable = require('./print-restore-table')
 
-async function runRestore(ssh, node) {
-  const sysRestore = await runSysupgrade(ssh, node, true)
-  console.log("TCL: sysRestore", sysRestore)
-  await waitFor(50)
-  const restoredSsh = await tryConnect(node.backup.folder)
-  console.log("TCL: restoredSsh", restoredSsh)
-  if (restoredSsh && !restoredSsh.error) {
-    console.log('Success!!! Connected to Node')
-    // check if Lime config and no lime-node
-    const checkLimeNode = await execute(ssh, 'uci get lime-node.system.hostname')
-    console.log("TCL: runRestore -> checkLimeNode", checkLimeNode)
-    if (checkLimeNode) {
-      return true
-    }
-    const checkLime = await execute(ssh, 'uci get lime.system.hostname')
-    console.log("TCL: runRestore -> checkLime", checkLime)
-    const setLimeNode = await execute(ssh, `uci set lime-node.system.hostname=${checkLime} && uci commit && lime-config && lime-apply && wifi`)
-    // repeat for all other lime settings
-
+async function doSysupgrade(nodes) {
+  for (const node of nodes) {
+    console.log('Running on node', node.node)
+    const ssh = await connectAllIps({
+      ip: node.ip,
+      oldIp: node.backup.folder,
+      hostname: node.node,
+    })
+    await runSysupgrade(ssh, node, true)
+    await waitFor(60 / nodes.length, true)
+    return true
   }
 }
 
-module.exports = async ({dir, nodes, latestRevision}) => {
-  try {
-    let restoringNodes = nodes
-    const updateNode = newItem => restoringNodes
-    .forEach((r, index) => {
-      if (r.node === newItem.node) {
-        restoringNodes[index] = {
-          ...r,
-          ...newItem,
-        }
+async function checkRestore(nodes) {
+  let restoredNodes = nodes
+  const updateNode = newItem => restoredNodes
+  .forEach((r, index) => {
+    if (r.node === newItem.node) {
+      restoredNodes[index] = {
+        ...r,
+        ...newItem,
       }
-    })
-    // read all folders, filter if --nodes
-    const folders = await fs.readdirSync(dir)
-    restoringNodes = await Promise.all(folders.map(async f => {
-      const files = await fs.readdirSync(`${dir}/${f}`)
-      const backupFile = files.filter(i => i.split('-')[0] === 'backup')[0]
-      if (backupFile) {
-        const hostname = backupFile.split('-')[1]
-        const splitIp = f.split('.')
-        const ip = `${splitIp[0]}.13.${splitIp[2]}.${splitIp[3]}`
-        return {
-          backup: {
-            backup: true,
-            file: backupFile,
-            folder: f,
-          },
-          node: hostname,
-          ip,
-        }
-      }
-    }))
-    if (restoringNodes && nodes) {
-      restoringNodes = restoringNodes.reduce((acc, curr) => {
-        const exists = nodes.filter(n => n === curr.node || n === curr.ip)[0]
-        if (exists) return acc.concat(curr)
-        return acc
-      }, [])
     }
-    printUpgradeTable(restoringNodes, latestRevision)
-    /* Get info */
-    for (const node of restoringNodes) {
-      let connectionTries = 0
-      const tryConnect = async host => {
-        const ssh = await connect(host)
-        if (ssh.error) {
-          if (connectionTries > 10) return false
-          connectionTries++
-          if (process.env.NODE_ENV !== 'development') {
-            console.clear()
+  })
+  return Promise.all(nodes.map(async node => {
+    const ssh = await connect(node.backup.folder)
+    if (ssh && !ssh.error) {
+      // check if Lime config and no lime-node
+      const oldLimeConfig = await execute(ssh, 'uci show lime')
+      if (oldLimeConfig) {
+        const oldConfList = oldLimeConfig.split('\n')
+        for (const conf of oldConfList) {
+          const config = conf.split('lime.')[1]
+          switch (conf.split('=')[0]) {
+          case 'lime.system.hostname':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.modes':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.adhoc_mcast_rate_5ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.distance_5ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.channel_5ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.channel_2ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.distance_2ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          case 'lime.wifi.adhoc_mcast_rate_2ghz':
+            execute(ssh, `uci set lime-node.${config}`, null, true)
+            break
+          default:
+            execute(ssh, `uci set lime-community.${config}`, null, true)
+            break
           }
-          console.log('Failed connecting: ', connectionTries)
-          await tryConnect()
         }
-        return ssh
+        await execute(ssh, 'uci commit && lime-config && lime-apply && wifi && rm /etc/config/lime', null, true)
       }
-      const ssh = await tryConnect(node.ip)
-      const info = await getNodeInfo(ssh)
-      const nodeWithInfo = {
+      const restoredNode = {
         ...node,
-        ...info,
+        restore: {
+          done: true,
+        },
       }
-      updateNode(nodeWithInfo)
-      printUpgradeTable(restoringNodes, latestRevision)
-      const backupFilePath = `${dir}/${nodeWithInfo.backup.folder}/${nodeWithInfo.backup.file}`
-      console.log("TCL: backupFilePath", backupFilePath, nodeWithInfo.node, nodeWithInfo.ip)
-      const putBackup = await putFile(nodeWithInfo.ip, backupFilePath, `/tmp/${nodeWithInfo.backup.file}`)
-      console.log("TCL: putBackup", putBackup)
-      if (putBackup) {
-        const checkFile = await execute(ssh, 'ls /tmp/backup-*.tar.gz')
-        if (!checkFile.error) {
-          return runRestore(ssh, nodeWithInfo)
-        }
-      }
+      updateNode(restoredNode)
+      printRestoreTable(restoredNodes)
+      return restoredNodes
     }
-    // ask to continue
-    // connect to 10.13.*.*
-    // put back-file
-    // sysupgrade -r
+    const restoredNode = {
+      ...node,
+      restore: {
+        done: {
+          error: true,
+        },
+      },
+    }
+    updateNode(restoredNode)
+    printRestoreTable(restoredNodes)
+    return restoredNodes
+  }))
+}
 
-    return true
+module.exports = async nodes => {
+  try {
+    await doSysupgrade(nodes)
+    const restoredNodes = await checkRestore(nodes)
+    return restoredNodes
   } catch (error) {
-    console.log("TCL: error", error)
+    console.log('An error ocurred while restoring nodes', error)
+    return error
   }
 }

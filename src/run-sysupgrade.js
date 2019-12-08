@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 module.exports = async (ssh, node, restore) => {
   let backup = node
   const msg = restore ? 'Restoring backup...' : 'Executing sysupgrade...'
@@ -17,7 +19,7 @@ module.exports = async (ssh, node, restore) => {
     backup.upgrade = true
     return backup
   } catch (error) {
-    console.log("TCL: error", error)
+    console.log('Error while upgrading', error)
     return {
       ...backup,
       sysupgrade: {

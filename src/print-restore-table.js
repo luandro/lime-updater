@@ -1,9 +1,11 @@
+/* eslint-disable no-console */
+
 const Table = require('cli-table3')
 const chalk = require('chalk')
 
 module.exports = (nodes, latestRevision) => {
   const table = new Table({
-    head: ['Hops', 'Name', 'IP', 'model', 'Backup', 'Firmware', 'Upgrade', 'Version'],
+    head: ['Hops', 'Name', 'Expected ip', 'model', 'Backup', 'Put-file', 'Restored', 'Version'],
     colWidths: [6, 20, 15, 15, 10, 10, 10, 10, 12],
   })
 
@@ -12,19 +14,17 @@ module.exports = (nodes, latestRevision) => {
     let backup = 'Loading'
     let isUpToDate = null
     let revision = node.board ? chalk.red(node.board.release.revision) : '-'
-    let firmware = '-'
-    let upgrade = '-'
+    let connected = '-'
+    let restore = '-'
 
     if (node.backup) {
       backup = node.backup.backup.error ? chalk.red('Error') : chalk.green('Ok')
     }
-    if (node.firmware) {
-      firmware = node.firmware.error ? chalk.red('Error') : chalk.green('Ok')
+    if (node.restore && node.restore.file) {
+      connected = node.restore.file.error ? chalk.red('Error') : chalk.green('Ok')
     }
-    if (node.upgrade) {
-      upgrade = node.upgrade.error ? chalk.red('Error') : chalk.green('Ok')
-    } else {
-      upgrade = isUpToDate ? chalk.green('Ok') : '-'
+    if (node.restore && node.restore.done) {
+      restore = node.restore.done.error ? chalk.red('Error') : chalk.green('Ok')
     }
     if (latestRevision && node.board) {
       isUpToDate = node.board.release.version === latestRevision
@@ -36,8 +36,8 @@ module.exports = (nodes, latestRevision) => {
       node.ip,
       node.board ? node.board.board_name : '-',
       backup,
-      firmware,
-      upgrade,
+      connected,
+      restore,
       revision,
     ])
   })

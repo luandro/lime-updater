@@ -16,6 +16,7 @@ async function findAndCheckFirmware(nodes, firmwarePath) {
   for (const node of nodes) {
     const targets = node.board.release.target.split('/')
     let boardName
+    // FIX: should look for file with most similar name, check if version from node.board.release.model matches
     switch (node.board.board_name) {
     case 'tl-wdr3500':
       boardName = 'tl-wdr3500-v1'
@@ -30,8 +31,6 @@ async function findAndCheckFirmware(nodes, firmwarePath) {
     const fileDir = `${firmwarePath}/targets/${targets[0]}/${targets[1]}`
     const firmwareName = `openwrt-${targets[0]}-${targets[1]}-${boardName}-squashfs-sysupgrade.bin`
     const firmwareFile = `${fileDir}/${firmwareName}`
-    // const checkSumFile = await fs.readFileSync(`${fileDir}/sha256sums`)
-    // console.log("TCL: findAndCheckFirmware -> checkSumFile", checkSumFile)
     const putFirmware = await putFile(node.node, firmwareFile, `/tmp/${firmwareName}`)
     const putCheckSum = await putFile(node.node, `${fileDir}/sha256sums`, '/tmp/sha256sums')
     if (putFirmware && putCheckSum) {
@@ -62,16 +61,8 @@ module.exports = async (nodes, firmwarePath, latestRevision) => {
         let promptContinue = true
         if (promptContinue) {
           promptContinue = false
-          const upgrade = await findAndCheckFirmware(nodes, firmwarePath)
-          // sysupgrade
-          // wait 60secs
-          // scp backup-*.tar.gz root@openwrt.lan:/tmp
-          // ls /tmp/backup-*.tar.gz
-          // sysupgrade -r /tmp/backup-*.tar.gz
-          // prompt for continue
-          // for (const node of nodes) {
-          // }
-          return upgrade
+          const upgradingNodes = await findAndCheckFirmware(nodes, firmwarePath)
+          return upgradingNodes
         }
       } catch (error) {
         throw error

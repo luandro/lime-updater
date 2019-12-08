@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop, no-console */
+
 const {Command, flags} = require('@oclif/command')
 const {cli} = require('cli-ux')
 const chalk = require('chalk')
@@ -13,6 +15,7 @@ const printNodesTable = require('./print-nodes-table')
 const runBackup = require('./run-backup')
 const runFirmwareCheck = require('./run-firmware-check')
 const runUpgrade = require('./run-upgrade')
+const putRestoreFiles = require('./put-restore-files')
 const runRestore = require('./run-restore')
 
 const log = console.log
@@ -25,14 +28,16 @@ async function doUpgrade({dir, nodes, hostname, msg, firmwarePath, latestRevisio
     // const isThisNode = nodes.filter(n => n.node === hostname)[0]
     const upgradeMsg = nodes.length > 1 ? 'Finding, sending and checking firmware for all nodes' : `Finding, sending and checking firmware for ${nodes[0].node}`
     log(upgradeMsg)
-    const firmwareCheck = await runFirmwareCheck(nodes, firmwarePath, latestRevision)
-    if (firmwareCheck) {
-      const errors = firmwareCheck.filter(i => i.firmware.error)
+    const firmwareCheckedNodes = await runFirmwareCheck(nodes, firmwarePath, latestRevision)
+    if (firmwareCheckedNodes) {
+      const errors = firmwareCheckedNodes.filter(i => i.firmware.error)
       if (errors.length === 0) {
         log('Time to execute the upgrade!')
         const promptUpgrade = await cli.confirm(`Are you sure you want to upgrade the firmware for ${msg} (y/n)`)
         if (promptUpgrade) {
-          const upgrade = await runUpgrade(firmwareCheck)
+          const upgrade = await runUpgrade(firmwareCheckedNodes)
+          console.log("TCL: doUpgrade -> upgrade", upgrade)
+          await cli.anykey('Upgrade done. Press any key to proceed with restore')
           return upgrade
         }
       }
@@ -53,10 +58,32 @@ async function backupAndUpgrade(opts, exit) {
   exit()
 }
 
+async function doRestore({dir, nodes, latestRevision, exit}) {
+  const filesRestored = await putRestoreFiles({
+    dir,
+    nodes,
+    latestRevision,
+  })
+  const noErrors = filesRestored.filter(i => !i.restore.error)
+  const errors = filesRestored.length - noErrors.length
+  if (noErrors.length > 0) {
+    const msg = errors.length > 0 ? `${errors.length} node${errors.length > 1 ? 's' : ''}` : 'all nodes'
+    // prompt
+    await cli.anykey(`Pres any key to proceed restoring the backed up settings for ${msg}`)
+    const restore = await runRestore(noErrors)
+    if (restore && !restore.error) {
+      log('Restore complete!')
+      return true
+    }
+  }
+  console.log('No nodes with backup. Can\'t continue restoring.')
+  exit()
+}
+
 class LimeUpdaterCommand extends Command {
   async run() {
     const {flags} = this.parse(LimeUpdaterCommand)
-    const postInstall = flags.post_install
+    const onlyRestore = flags.restore
     const initialNode = flags.initial_node
     const dataDir = flags.data_dir || appDir
     const firmwarePath = flags.firmware
@@ -72,17 +99,13 @@ class LimeUpdaterCommand extends Command {
     const latestRevision = process.env.NODE_ENV === 'development' ? 'a5ab2e48bc9e6318c3928a5164238baa731af1d3' : await getlatestRevision()
     cli.action.stop('Got Revision')
     if (latestRevision) chalk.cyan(log('Latest LibreMesh revision:', latestRevision))
-    /* In case post-install option */
-    if (postInstall) {
-      const restore = await runRestore({
-        dir: dataDir,
-        nodes: customNodes,
-        latestRevision,
-      })
+    /* In case restore option */
+    if (onlyRestore) {
+      const restore = await doRestore({dir: dataDir, nodes: customNodes, latestRevision, exit: this.exit})
       if (restore) {
-        log('Restore complete!')
+        const finish = await cli.anykey('Restore was sucessful, press any key to exit')
+        if (finish) return true
       }
-      console.log("TCL: LimeUpdaterCommand -> run -> restore", restore)
       this.exit()
     }
     /* Get mesh nodes */
@@ -136,15 +159,11 @@ class LimeUpdaterCommand extends Command {
         latestRevision,
       }, this.exit)
       if (upgrade) {
-        waitFor(100, true)
-        const restore = await runRestore({dir: dataDir, nodes: upgrade, latestRevision})
-        waitFor(60, true)
-        console.log("TCL: LimeUpdaterCommand -> run -> restore", restore)
+        waitFor(60 / upgrade.length, true)
+        await doRestore({dir: dataDir, nodes: upgrade, latestRevision, exit: this.exit})
+        return this.run()
       }
-      else {
-        this.exit()
-      }
-      console.log("TCL: LimeUpdaterCommand -> run -> upgrade", upgrade)
+      this.exit()
     }
   }
 }
@@ -160,10 +179,10 @@ LimeUpdaterCommand.flags = {
   // add --help flag to show CLI version
   help: flags.help({char: 'h'}),
   initial_node: flags.string({char: 'i', description: 'Define the node from which you want to see the mesh perspective'}),
-  post_install: flags.boolean({char: 'p', default: false, description: 'only run post install, copying files and setting configs to the nodes'}),
+  restore: flags.boolean({char: 'r', default: false, description: 'run restoring backup, copying files and setting configs to the nodes'}),
   data_dir: flags.string({char: 'd', description: 'Folder where to store backup data for the nodes.'}),
   nodes: flags.string({char: 'n', description: 'limits the upgrade to only the listed ones separated by `,` wihout spaces'}),
-  yes: flags.boolean({char: 'y', default: false, description: 'run without asking for prompts'}),
+  // yes: flags.boolean({char: 'y', default: false, description: 'run without asking for prompts'}),
   firmware: flags.string({char: 'f', description: 'can be an absolute path in your system of a url where the firmware live. The program expects the files to be arranged as they are cooked'})
 }
 
