@@ -32,7 +32,11 @@ async function checkRestore(nodes) {
     }
   })
   return Promise.all(nodes.map(async node => {
-    const ssh = await connect(node.backup.folder)
+    const ssh = await connectAllIps({
+      ip: node.ip,
+      oldIp: node.backup.folder,
+      hostname: node.node,
+    })
     if (ssh && !ssh.error) {
       // check if Lime config and no lime-node
       const oldLimeConfig = await execute(ssh, 'uci show lime')

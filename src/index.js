@@ -52,6 +52,7 @@ async function backupAndUpgrade(opts, exit) {
   if (promptContinue) {
     const backups = await runBackup(nodes, dir)
     const upgrade = await doUpgrade({dir, nodes: backups, hostname, msg, firmwarePath, latestRevision})
+    await waitFor(60 / upgrade.length, true)
     return upgrade
   }
   exit()
@@ -157,8 +158,8 @@ class LimeUpdaterCommand extends Command {
         firmwarePath,
         latestRevision,
       }, this.exit)
+      console.log("TCL: LimeUpdaterCommand -> run -> upgrade", upgrade)
       if (upgrade) {
-        waitFor(60 / upgrade.length, true)
         await doRestore({dir: dataDir, nodes: upgrade, latestRevision, exit: this.exit})
         return this.run()
       }

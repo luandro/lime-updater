@@ -7,7 +7,6 @@ module.exports = async (secs, showProgress) => new Promise(resolve => {
     if (passedSecs < secs) {
       passedSecs++
       bar.update(passedSecs)
-      console.clear()
       timeout()
     } else {
       bar.stop()

@@ -20,6 +20,7 @@ module.exports = async nodes => {
     const sysupgrade = await runSysupgrade(ssh, node)
     updateNode(sysupgrade)
     printUpgradeTable(upgradingNodes)
+    waitFor(2)
   }
   printUpgradeTable(upgradingNodes)
   return upgradingNodes
