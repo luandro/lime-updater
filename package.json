@@ -1,7 +1,7 @@
 {
   "name": "lime-updater",
   "description": "A command-line tool for updating LibreMesh on all nodes in a mesh network",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Luandro <luandro@gmail.com>",
   "bin": {
     "lime-updater": "./bin/run"
